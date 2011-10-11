@@ -241,6 +241,78 @@ class TestStatement(unittest.TestCase):
         self.assertEqual(context['x'], 3)
         self.assertEqual(context['y'], 2)
 
+    def test_for_statement(self):
+        context = js.ExecutionContext({'x': 1})
+        self.assertEqual(self.eval('for (;x < 5;) ++x;', context), js.Completion(js.NORMAL, 5, js.EMPTY))
+        self.assertEqual(context['x'], 5)
+
+    def test_for_break_statement(self):
+        stmt = """for (;x < 10;) {
+                      ++x;
+                      if (x % 3 == 0)
+                          break;
+                      ++y;
+               }"""
+        context = js.ExecutionContext({'x': 0, 'y': 0})
+        self.assertEqual(self.eval(stmt, context), js.Completion(js.NORMAL, 2, js.EMPTY))
+        self.assertEqual(context['x'], 3)
+        self.assertEqual(context['y'], 2)
+
+    def test_for_empty3_statement(self):
+        stmt = """for (;;) {
+                      x = x + 1;
+                      if (x == 3)
+                          break;
+               }"""
+        context = js.ExecutionContext({'x': 0})
+        self.assertEqual(self.eval(stmt, context), js.Completion(js.NORMAL, 2, js.EMPTY))
+        self.assertEqual(context['x'], 3)
+
+    def test_for_full3_statement(self):
+        stmt = """for (x=1;x<7;++y)
+                      x = x + 1;
+               """
+        context = js.ExecutionContext({'x': 0, 'y': 0})
+        self.assertEqual(self.eval(stmt, context), js.Completion(js.NORMAL, 7, js.EMPTY))
+        self.assertEqual(context['x'], 7)
+        self.assertEqual(context['y'], 6)
+
+    def test_for_var_statement(self):
+        context = js.ExecutionContext({'x': 1})
+        self.assertEqual(self.eval('for (var x=0;x < 5;) ++x;', context), js.Completion(js.NORMAL, 5, js.EMPTY))
+        self.assertEqual(context['x'], 5)
+
+    def test_for_var_break_statement(self):
+        stmt = """for (var x=0;x < 10;) {
+                      ++x;
+                      if (x % 3 == 0)
+                          break;
+                      ++y;
+               }"""
+        context = js.ExecutionContext({'y': 0})
+        self.assertEqual(self.eval(stmt, context), js.Completion(js.NORMAL, 2, js.EMPTY))
+        self.assertEqual(context['x'], 3)
+        self.assertEqual(context['y'], 2)
+
+    def test_for_var_empty2_statement(self):
+        stmt = """for (var x=0;;) {
+                      x = x + 1;
+                      if (x == 3)
+                          break;
+               }"""
+        context = js.ExecutionContext({'z': 0})
+        self.assertEqual(self.eval(stmt, context), js.Completion(js.NORMAL, 2, js.EMPTY))
+        self.assertEqual(context['x'], 3)
+        self.assertEqual(context['z'], 0)
+
+    def test_for_var_full2_statement(self):
+        stmt = """for (var x=1;x<7;++y)
+                      x = x + 1;
+               """
+        context = js.ExecutionContext({'y': 0})
+        self.assertEqual(self.eval(stmt, context), js.Completion(js.NORMAL, 7, js.EMPTY))
+        self.assertEqual(context['x'], 7)
+        self.assertEqual(context['y'], 6)
 
 class TestProgram(unittest.TestCase):
     @classmethod
@@ -290,6 +362,29 @@ class TestProgram(unittest.TestCase):
         context = js.ExecutionContext({})
         self.assertEqual(self.eval(program, context), js.Completion(js.NORMAL, 4, js.EMPTY))
         self.assertEqual(context['x'], 1)
+        
+    def test_for(self):
+        program = """x = 4;
+                     c = 0;
+                     for (x=0;x<4;++c) {
+                            x = x + 1;
+                     }"""
+        print(self.parser.parse(program))
+        context = js.ExecutionContext({})
+        self.assertEqual(self.eval(program, context), js.Completion(js.NORMAL, 4, js.EMPTY))
+        self.assertEqual(context['x'], 4)
+        self.assertEqual(context['c'], 4)
+        
+    def test_for_var(self):
+        program = """var x = 4;
+                     var c = 0;
+                     for (var x=0;x<4;++c) {
+                            x = x + 1;
+                     }"""
+        context = js.ExecutionContext({})
+        self.assertEqual(self.eval(program, context), js.Completion(js.NORMAL, 4, js.EMPTY))
+        self.assertEqual(context['x'], 4)
+        self.assertEqual(context['c'], 4)
         
     def test_closure(self):
         program = """var fibgen = function () {

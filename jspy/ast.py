@@ -370,6 +370,41 @@ class WhileStatement(Node):
     def get_declared_vars(self):
         return self.statement.get_declared_vars()
 
+class ForStatement(Node):
+    children = ['declarations', 'start_expression', 'condition', 'count_expression', 'statement']
+
+    def eval(self, context):
+        # for for(var exp1, cond, exp2)
+        if self.declarations is not None:
+          for declaration in self.declarations:
+              declaration.eval(context)
+
+        # for for(exp1, cond, exp2)
+        if self.start_expression is not None:
+            ref = self.start_expression.eval(context)
+            js.get_value(ref)
+
+        result_value = js.EMPTY
+        while True:
+            if self.condition is not None:
+              condition_value = js.get_value(self.condition.eval(context))
+              if not condition_value:
+                  return js.Completion(js.NORMAL, result_value, js.EMPTY)
+            stmt = self.statement.eval(context)
+            if stmt.value is not js.EMPTY:
+                result_value = stmt.value
+            if stmt.type is js.BREAK:
+                return js.Completion(js.NORMAL, result_value, js.EMPTY)
+            if js.is_abrupt(stmt) and stmt.type is not js.CONTINUE:
+                return stmt
+            if self.count_expression is not None:
+              count_expression_ref = self.count_expression.eval(context)
+              js.get_value(count_expression_ref)
+
+    def get_declared_vars(self):
+        return set_union([self.declarations.get_declared_vars(),
+                          self.statement.get_declared_vars()])
+
 
 class DoWhileStatement(Node):
     children = ['condition', 'statement']

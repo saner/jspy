@@ -59,8 +59,8 @@ Implemented features
 Todo (in order of priorities)
 -----------------------------
 
-  * `for` and `for in` loops
   * `switch` statement
+  * `for in` loops
   * Full object support (including an `Array` implementation)
   * `delete`, `typeof`, `instanceof` and `in` operators
   * Function statements

@@ -138,9 +138,25 @@ class Parser(object):
         else:
             p[0] = p[1] + [p[3]]
 
+    def p_variable_declaration_list_no_in(self, p):
+        """variable_declaration_list_no_in : variable_declaration_no_in
+                                           | variable_declaration_list_no_in COMMA variable_declaration_no_in"""
+        if len(p) == 2:
+            p[0] = [p[1]]
+        else:
+            p[0] = p[1] + [p[3]]
+
     def p_variable_declaration(self, p):
         """variable_declaration : identifier
                                 | identifier EQUALS assignment_expression"""
+        if len(p) == 2:
+            p[0] = ast.VariableDeclaration(identifier=p[1], initialiser=None)
+        else:
+            p[0] = ast.VariableDeclaration(identifier=p[1], initialiser=p[3])
+
+    def p_variable_declaration_no_in(self, p):
+        """variable_declaration_no_in : identifier
+                                      | identifier EQUALS assignment_expression_no_in"""
         if len(p) == 2:
             p[0] = ast.VariableDeclaration(identifier=p[1], initialiser=None)
         else:
@@ -180,8 +196,10 @@ class Parser(object):
     #
     def p_iteration_statement(self, p):
         """iteration_statement : do_while_statement
-                               | while_statement"""
-        # TODO : for_statement, for_var_statement, for_in_statement, for_var_in_statement
+                               | while_statement
+                               | for_statement
+                               | for_var_statement"""
+        # TODO : for_in_statement, for_var_in_statement
         p[0] = p[1]
 
     def p_while_statement(self, p):
@@ -191,6 +209,103 @@ class Parser(object):
     def p_do_while_statement(self, p):
         """do_while_statement : DO statement WHILE LPAREN expression RPAREN SEMICOLON"""
         p[0] = ast.DoWhileStatement(condition=p[5], statement=p[2])
+
+    def p_for_statement(self, p):
+        """for_statement : FOR LPAREN expression_no_in_opt SEMICOLON expression_opt SEMICOLON expression_opt RPAREN statement"""
+        if len(p) == 7:
+            # FOR LPAREN SEMICOLON SEMICOLON RPAREN statement
+            p[0] = ast.ForStatement(declarations = None, 
+                                    start_expression = None,
+                                    condition = None,
+                                    count_expression = None,
+                                    statement = p[6])
+        elif len(p) == 8:
+            if p[3] != ";":
+                # FOR LPAREN expression_no_in SEMICOLON SEMICOLON RPAREN statement
+                p[0] = ast.ForStatement(declarations = None,
+                                        start_expression = p[3],
+                                        condition = None,
+                                        count_expression = None,
+                                        statement = p[7])
+            elif p[4] != ";":
+                # FOR LPAREN SEMICOLON expression SEMICOLON RPAREN statement
+                p[0] = ast.ForStatement(declarations = None,
+                                        start_expression = None,
+                                        condition = p[4],
+                                        count_expression = None,
+                                        statement = p[7])
+            elif p[5] != ";":
+                # FOR LPAREN SEMICOLON SEMICOLON expression RPAREN statement
+                p[0] = ast.ForStatement(declarations = None,
+                                        start_expression = None,
+                                        condition = None,
+                                        count_expression = p[5],
+                                        statement = p[7])
+        elif len(p) == 9:
+            if p[5] != ";":
+                # FOR LPAREN expression_no_in SEMICOLON expression SEMICOLON RPAREN statement
+                p[0] = ast.ForStatement(declarations = None,
+                                        start_expression = p[3],
+                                        condition = p[5],
+                                        count_expression = None,
+                                        statement = p[8])
+            elif p[6] != ";":
+                # FOR LPAREN expression_no_in SEMICOLON SEMICOLON expression RPAREN statement
+                p[0] = ast.ForStatement(declarations = None,
+                                        start_expression = p[3],
+                                        condition = None,
+                                        count_expression = p[6],
+                                        statement = p[8])
+            elif p[6] != ";":
+                # FOR LPAREN SEMICOLON expression SEMICOLON expression RPAREN statement
+                p[0] = ast.ForStatement(declarations = None,
+                                        start_expression = None,
+                                        condition = p[4],
+                                        count_expression = p[6],
+                                        statement = p[8])
+        else: # len(p) == 9:
+            # FOR LPAREN expression_no_in SEMICOLON expression SEMICOLON expression RPAREN statement
+            p[0] = ast.ForStatement(declarations = None,
+                                    start_expression = p[3],
+                                    condition = p[5],
+                                    count_expression = p[7],
+                                    statement = p[9])
+
+    def p_for_var_statement(self, p):
+        """for_var_statement : FOR LPAREN VAR variable_declaration_list_no_in SEMICOLON expression_opt SEMICOLON expression_opt RPAREN statement"""
+
+        if len(p) == 9:
+            # FOR LPAREN VAR variable_declaration_list_no_in SEMICOLON SEMICOLON RPAREN statement
+            p[0] = ast.ForStatement(declarations = p[4],
+                                    start_expression = None,
+                                    condition = None,
+                                    count_expression = None,
+                                    statement = p[8])
+
+        if len(p) == 10:
+            if p[6] != ";":
+                # FOR LPAREN VAR variable_declaration_list_no_in SEMICOLON expression SEMICOLON RPAREN statement
+                p[0] = ast.ForStatement(declarations = p[4],
+                                        start_expression = None,
+                                        condition = p[6],
+                                        count_expression = None,
+                                        statement = p[9])
+            else:
+                # FOR LPAREN VAR variable_declaration_list_no_in SEMICOLON SEMICOLON expression RPAREN statement
+                p[0] = ast.ForStatement(declarations = p[4],
+                                        start_expression = None,
+                                        condition = None,
+                                        count_expression = p[7],
+                                        statement = p[9])
+
+        else:
+            # len(p) == 11:
+            # FOR LPAREN VAR variable_declaration_list_no_in SEMICOLON expression SEMICOLON expression RPAREN statement
+            p[0] = ast.ForStatement(declarations = p[4],
+                                    start_expression = None,
+                                    condition = p[6],
+                                    count_expression = p[8],
+                                    statement = p[10])
 
     #
     # [ECMA-262 12.7] The continue Statement
@@ -446,6 +561,18 @@ class Parser(object):
         else:
             p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
 
+    def p_relational_expression_no_in(self, p):
+        """relational_expression_no_in : shift_expression
+                                       | relational_expression_no_in LT shift_expression
+                                       | relational_expression_no_in LE shift_expression
+                                       | relational_expression_no_in GT shift_expression
+                                       | relational_expression_no_in GE shift_expression
+                                       | relational_expression_no_in INSTANCEOF shift_expression"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
     #
     # [ECMA-262 11.9] Equality Operators
     #
@@ -455,6 +582,17 @@ class Parser(object):
                                | equality_expression NEQ relational_expression
                                | equality_expression STRICTEQ relational_expression
                                | equality_expression STRICTNEQ relational_expression"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
+    def p_equality_expression_no_in(self, p):
+        """equality_expression_no_in : relational_expression_no_in
+                                     | equality_expression_no_in EQ relational_expression_no_in
+                                     | equality_expression_no_in NEQ relational_expression_no_in
+                                     | equality_expression_no_in STRICTEQ relational_expression_no_in
+                                     | equality_expression_no_in STRICTNEQ relational_expression_no_in"""
         if len(p) == 2:
             p[0] = p[1]
         else:
@@ -471,6 +609,14 @@ class Parser(object):
         else:
             p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
 
+    def p_bitwise_and_expression_no_in(self, p):
+        """bitwise_and_expression_no_in : equality_expression_no_in
+                                        | bitwise_and_expression_no_in AND equality_expression_no_in"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
     def p_bitwise_xor_expression(self, p):
         """bitwise_xor_expression : bitwise_and_expression
                                   | bitwise_xor_expression XOR bitwise_and_expression"""
@@ -479,9 +625,25 @@ class Parser(object):
         else:
             p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
 
+    def p_bitwise_xor_expression_no_in(self, p):
+        """bitwise_xor_expression_no_in : bitwise_and_expression_no_in
+                                        | bitwise_xor_expression_no_in XOR bitwise_and_expression_no_in"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
     def p_bitwise_or_expression(self, p):
         """bitwise_or_expression : bitwise_xor_expression
                                  | bitwise_or_expression OR bitwise_xor_expression"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
+    def p_bitwise_or_expression_no_in(self, p):
+        """bitwise_or_expression_no_in : bitwise_xor_expression_no_in
+                                       | bitwise_or_expression_no_in OR bitwise_xor_expression_no_in"""
         if len(p) == 2:
             p[0] = p[1]
         else:
@@ -498,9 +660,25 @@ class Parser(object):
         else:
             p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
 
+    def p_logical_and_expression_no_in(self, p):
+        """logical_and_expression_no_in : bitwise_or_expression_no_in
+                                        | logical_and_expression_no_in LAND bitwise_or_expression_no_in"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
     def p_logical_or_expression(self, p):
         """logical_or_expression : logical_and_expression
                                  | logical_or_expression LOR logical_and_expression"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.BinaryOp(op=p[2], left_expression=p[1], right_expression=p[3])
+
+    def p_logical_or_expression_no_in(self, p):
+        """logical_or_expression_no_in : logical_and_expression_no_in
+                                       | logical_or_expression_no_in LOR logical_and_expression_no_in"""
         if len(p) == 2:
             p[0] = p[1]
         else:
@@ -517,12 +695,28 @@ class Parser(object):
         else:
             p[0] = ast.ConditionalOp(condition=p[1], true_expression=p[3], false_expression=p[5])
         
+    def p_conditional_expression_no_in(self, p):
+        """conditional_expression_no_in : logical_or_expression_no_in
+                                        | logical_or_expression_no_in CONDOP assignment_expression COLON assignment_expression_no_in"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.ConditionalOp(condition=p[1], true_expression=p[3], false_expression=p[5])
+        
     #
     # [ECMA-262 11.13] Assignment Operators
     #
     def p_assignment_expression(self, p):
         """assignment_expression : conditional_expression
                                  | left_hand_side_expression assignment_operator assignment_expression"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.Assignment(op=p[2], reference=p[1], expression=p[3])
+    
+    def p_assignment_expression_no_in(self, p):
+        """assignment_expression_no_in : conditional_expression_no_in
+                                       | left_hand_side_expression assignment_operator assignment_expression_no_in"""
         if len(p) == 2:
             p[0] = p[1]
         else:
@@ -553,9 +747,22 @@ class Parser(object):
         else:
             p[0] = ast.MultiExpression(left_expression=p[1], right_expression=p[3])
 
+    def p_expression_no_in(self, p):
+        """expression_no_in : assignment_expression_no_in
+                            | expression_no_in COMMA assignment_expression_no_in"""
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = ast.MultiExpression(left_expression=p[1], right_expression=p[3])
+
     def p_expression_opt(self, p):
         """expression_opt : expression
                           | empty"""
+        p[0] = p[1]
+
+    def p_expression_no_in_opt(self, p):
+        """expression_no_in_opt : expression
+                                | empty"""
         p[0] = p[1]
 
     #
